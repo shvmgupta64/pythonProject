@@ -16,6 +16,7 @@ class DfManager:
 
     def filter_Banknifty_future(self, df):
         filtered_df = df[df['Ticker'].str.startswith("BANKNIFTY-I.NFO")]
+        #filtered_df = df[df['Ticker'] == "BANKNIFTY-I"]
         return self.sort_dataframe(filtered_df)
 
     def filter_BnfOptions_data(self, df, expiry_date):
@@ -27,7 +28,7 @@ class DfManager:
         pd.options.mode.chained_assignment = None
         df['Time'] = df['Time'].apply(lambda x: datetime.datetime.strptime(x, '%H:%M:%S').time())
         #df.loc[:, 'Time'] = df['Time']
-        sorted_df = df.sort_values('Time')
+        sorted_df = df.sort_values(['Time'])
         return sorted_df
 
     #****************************************************************************************************

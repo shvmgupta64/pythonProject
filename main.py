@@ -2,48 +2,77 @@ import csvManager
 import dfManager
 import expiryDateManager
 import constants
+from datetime import datetime
 import supertrend
 import rsiManager
-
+import os
 if __name__ == '__main__':
 
-    file_path = constants.FILE_PATH
+    # initialize Trade log Dataframe
+    trade_log = ['Entry_Datetime', 'Future_Traded_Price', 'Days_to_Expiry', 'Symbol', 'Entry_Price', 'Exit_Price',
+                 'PnL']
+
+
+
+    bnf_future_file_path = constants.BANKNIFTY_FUTURE_2023_PATH
     CM = csvManager.CsvManager()
-    data_as_df = CM.read_csv_to_df(file_path)
+    banknifty_dataframe = CM.read_csv_to_df(bnf_future_file_path)
 
-    #calculate Trading Date
-    trading_date = file_path.split("//")[-1].split("_")[-1].split(".")[0]
+    #***************************************************************************************************************
+    #
+    # get the list of all the files for given directory
+    # These files are having all the FnO data
+    #
+    #***************************************************************************************************************
+    options_data_directory = "C://Historical Data//2023"
+    files = []
+    for root, _, file_names in os.walk(options_data_directory):
+        for file_name in file_names:
+            if (bnf_future_file_path.split('//')[-1]) in file_name:
+                continue
+            else:
+                files.append(os.path.join(root, file_name))
 
-    #calculate Expiry Day
-    EDM = expiryDateManager.ExpiryDateManager()
-    expiry_date = EDM.calculate_expiry_date(trading_date)
-    expiry_date_in_option_ticker = str(EDM.convert_date(expiry_date))
+    #print(files)
+    #***************************************************************************************************************
+    #
+    # Main logic will start from here, we got the list of files.
+    # We will read all the files one by one and according to date will get the data from banknifty dataframe.
+    #
+    #
+    #
+    #***************************************************************************************************************
+    for file_path in files:
 
-    #create banknifty future dataframe
-    #create banknifty options dataframe
-    DfManager = dfManager.DfManager()
-    banknifty_future_df = DfManager.filter_Banknifty_future(data_as_df)
-    options_df = DfManager.filter_BnfOptions_data(data_as_df, expiry_date_in_option_ticker)
+        # get FnO Data into Dataframe
+        fno_df = CM.read_csv_to_df(file_path)
+
+        trading_date = file_path.split("\\")[-1].split("_")[-1].split(".")[0]
+
+        # calculate Expiry Day
+        EDM = expiryDateManager.ExpiryDateManager()
+        expiry_date = EDM.calculate_expiry_date(trading_date)
+
+        # expiry_date_in_option_ticker
+        # this is the dat format like 05JAN23 which will be used to filter option ticker
+        # for ex. BANKNIFTY05JAN2323500PE
+        expiry_date_in_option_ticker = str(EDM.convert_date(expiry_date))
+        print(expiry_date_in_option_ticker)
+
+        DfManager = dfManager.DfManager()
+        bnf_options_df = DfManager.filter_BnfOptions_data(fno_df, expiry_date_in_option_ticker)
+        bnf_options_five_min_df = DfManager.get_custom_min_ohlc(bnf_options_df, '5Min')
+
+        trading_date_temp = datetime.strptime(trading_date, "%d%m%Y")
+        trading_date_dd_mm_yyyy = str(trading_date_temp.strftime("%d-%m-%Y"))
+
+        #*****************************************************************************************************
+        # get banknifty inraday daya from dataframe which has complete year ohlc data
+        #*****************************************************************************************************
+        banknifty_itraday_df = banknifty_dataframe[(banknifty_dataframe['Date'] == trading_date_dd_mm_yyyy)]
 
 
-    # call get_custom_min_ohlc method to convert 1 min timeframe DF to 5 min timeframe DF
-    banknifty_five_min_df = DfManager.get_custom_min_ohlc(banknifty_future_df,'5Min')
-    bnf_options_five_min_df = DfManager.get_custom_min_ohlc(options_df,'5Min')
-
-
-    #add supertrend to Banknifty Future Dataframe
-    ST = supertrend.StManager()
-    banknifty_five_min_df_with_st = ST.calculate_supertrend(banknifty_five_min_df, 7, 2)
-
-    #add RSI to Banknifty Future Dataframe
-    RSI = rsiManager.RSIManager()
-    banknifty_five_min_df_with_st_rsi = RSI.calculate_rsi(banknifty_five_min_df_with_st)
-    print(banknifty_five_min_df_with_st_rsi)
-    CM.create_csf_from_df(banknifty_five_min_df_with_st_rsi)
-
-
-
-
+        break
 
 
 
