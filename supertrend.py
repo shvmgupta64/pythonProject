@@ -45,8 +45,8 @@ class StManager:
             if df['Close'][current] > df['Upperband'][current]:
                 df['Supertrend'][current] = df['Upperband'][current]
 
-        df.drop('Upperband', axis=1, inplace=True)
-        df.drop('Lowerband', axis=1, inplace=True)
+        #df.drop('Upperband', axis=1, inplace=True)
+        #df.drop('Lowerband', axis=1, inplace=True)
         df.drop('TR', axis=1, inplace=True)
         return df
 
