@@ -46,15 +46,17 @@ for file_name in file_list:
     complete_banknifty_futures_data = pd.concat([complete_banknifty_futures_data, banknifty_five_min_df], ignore_index=True)
     index = index + 1
 
+
 #sort data frame by date and time
 #complete_banknifty_futures_data = complete_banknifty_futures_data.sort_values(['Date','Time'])
 
 ST = supertrend.StManager()
-banknifty_five_min_df_with_st_2023 = ST.calculate_supertrend(complete_banknifty_futures_data, 10, 2)
+st_df = ST.calculate_tradingView_ST(complete_banknifty_futures_data, 10, 2)
+banknifty_five_min_df_with_st_2023 = complete_banknifty_futures_data.join(st_df)
 
 # add RSI to Banknifty Future Dataframe
 RSI = rsiManager.RSIManager()
 banknifty_five_min_df_with_st_rsi_2023 = RSI.calc_rsi_tradingview(banknifty_five_min_df_with_st_2023)
 
-banknifty_five_min_df_with_st_rsi_2023.to_csv('C://Historical Data//2023//banknifty_2023_st_RSI.csv', index=False)
+banknifty_five_min_df_with_st_rsi_2023.to_csv('C://Historical Data//2023//BANKNIFTY_2023_ST_RSI.csv', index=False)
 
