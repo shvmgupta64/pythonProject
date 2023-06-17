@@ -63,27 +63,31 @@ if __name__ == '__main__':
         # *****************************************************************************************************
         # get banknifty inraday daya from dataframe which has complete year ohlc data
         # *****************************************************************************************************
-
+        banknifty_dataframe['Date'] = pd.to_datetime(banknifty_dataframe['Date'], format='mixed', dayfirst=True)
+        banknifty_dataframe['Date'] = banknifty_dataframe['Date'].dt.strftime("%d-%m-%Y")
         banknifty_itraday_df = banknifty_dataframe[(banknifty_dataframe['Date'] == trading_date_dd_mm_yyyy)]
+
+        # calcualte the banknifty intraday range
         banknifty_intraday_high = banknifty_itraday_df['High'].max()
         banknifty_intraday_low = banknifty_itraday_df['Low'].min()
+
+        # now get the unique tickers of banknifty options
         DfManager = dfManager.DfManager()
         bnf_options_df = DfManager.filter_BnfOptions_data(fno_df, expiry_date_in_option_ticker)
         all_options_tickers = bnf_options_df['Ticker'].unique()
         intraday_options_tickers = []
 
+        # create dataframe which will have all the intraday strikes
         for ticker in all_options_tickers:
             ticker_strike_price = int(ticker[16:21])
 
             if ticker_strike_price < banknifty_intraday_high and ticker_strike_price > banknifty_intraday_low:
-                #print(ticker_strike_price)
                 intraday_options_tickers.append(ticker)
 
         bnf_options_five_min_df = pd.DataFrame(
             columns=['Ticker', 'Date', 'Open', 'High', 'Low', 'Close', 'Time'])
 
         for ticker in intraday_options_tickers:
-            #print(ticker)
             option_unique_ticker_df = bnf_options_df[bnf_options_df['Ticker'] == ticker]
             unique_ticker_five_min_ohlc = DfManager.get_custom_min_ohlc(option_unique_ticker_df, '5Min')
             bnf_options_five_min_df = pd.concat([bnf_options_five_min_df,unique_ticker_five_min_ohlc])
@@ -104,8 +108,9 @@ if __name__ == '__main__':
         pe_buy_sell = ""
         pnl = 0
 
+        #print(banknifty_itraday_df)
         for index, row in banknifty_itraday_df.iterrows():
-
+            print(index)
             if current_trade_synFut:
                 if synth_fut_buy_sell == "Buy":
 
@@ -115,7 +120,7 @@ if __name__ == '__main__':
                         ce_found = False
                         pe_found = False
 
-                        for index, bnf_options in bnf_options_five_min_df.iterrows():
+                        for index_option, bnf_options in bnf_options_five_min_df.iterrows():
                             if bnf_options['Ticker'] == ce_straddle_symbol and bnf_options['Time'] == row['Time']:
                                 ce_pnl = bnf_options['Close'] - ce_buy_price
                                 ce_sell_price = bnf_options['Close']
@@ -136,6 +141,8 @@ if __name__ == '__main__':
 
                         if pnl < constants.INTRADAY_SL_LIMIT or row['Time'] == constants.TRADE_END_TIME:
                             # close all trades
+                            print("***** Either SL is hit or time is 03:20 *****")
+                            print("***** Closing all the trades *****")
                             ce_exit_time = row['Time']
                             pe_exit_time = row['Time']
 
@@ -158,6 +165,10 @@ if __name__ == '__main__':
                         else:
                             # convert synthetic to straddle
                             # close CE buy and sell it again
+
+                            print("====================Convert Synthetic Future to Straddle====================")
+                            print("====================" + row['Time'] + "====================")
+
                             current_trade_straddle = True
                             current_trade_synFut = False
                             max_rsi = 0
@@ -185,7 +196,7 @@ if __name__ == '__main__':
                         ce_found = False
                         pe_found = False
 
-                        for index, bnf_options in bnf_options_five_min_df.iterrows():
+                        for index_option, bnf_options in bnf_options_five_min_df.iterrows():
                             if bnf_options['Ticker'] == ce_straddle_symbol and bnf_options['Time'] == row['Time']:
                                 ce_pnl = ce_sell_price - bnf_options['Close']
                                 ce_buy_price = bnf_options['Close']
@@ -206,6 +217,8 @@ if __name__ == '__main__':
 
                         if pnl < constants.INTRADAY_SL_LIMIT or row['Time'] == constants.TRADE_END_TIME:
                             # close all trades
+                            print("***** Either SL is hit or time is 03:20 *****")
+                            print("***** Closing all the trades *****")
                             ce_exit_time = row['Time']
                             pe_exit_time = row['Time']
                             synth_fut_trigger_price = 0
@@ -229,8 +242,8 @@ if __name__ == '__main__':
                         else:
                             # convert synthetic to straddle
                             # close PE buy and sell it again
-                            print("Convert Synthetic Future to Straddle")
-                            print(row['Time'])
+                            print("====================Convert Synthetic Future to Straddle====================")
+                            print("===================="+row['Time']+"====================")
                             current_trade_straddle = True
                             current_trade_synFut = False
                             synth_fut_trigger_price = 0
@@ -256,7 +269,7 @@ if __name__ == '__main__':
                 ce_found = False
                 pe_found = False
                 #calculate pnl for current trade
-                for index, bnf_options in bnf_options_five_min_df.iterrows():
+                for index_option, bnf_options in bnf_options_five_min_df.iterrows():
                     if bnf_options['Ticker'] == ce_straddle_symbol and bnf_options['Time'] == row['Time']:
                         ce_pnl = ce_sell_price - bnf_options['Close']
                         ce_buy_price = bnf_options['Close']
@@ -311,7 +324,7 @@ if __name__ == '__main__':
                 ce_sell_price = 0
                 pe_buy_price = 0
 
-                for index, bnf_options in bnf_options_five_min_df.iterrows():
+                for index_option, bnf_options in bnf_options_five_min_df.iterrows():
                     if bnf_options['Ticker'] == ce_straddle_symbol and bnf_options['Time'] == constants.FIRST_STRADDLE_TIME:
                         ce_sell_price = bnf_options['Open']
                         ce_entry_time = bnf_options['Time']
@@ -335,10 +348,13 @@ if __name__ == '__main__':
                 print(pe_straddle_symbol + " sold at " + str(pe_sell_price))
                 print("+++++++++++++++++++++++----Straddle Entry at 9:20----+++++++++++++++++++++")
 
-            if current_trade_straddle == True:
+            if current_trade_straddle:
+                print(row['Time'])
+                print(row['Date'])
+                print(index)
 
-                if row['rsi'] is not None and row['rsi'] > constants.RSI_BAND_HIGH and (
-                        index == 0 or row['rsi'] > banknifty_itraday_df.loc[index - 1, 'rsi']):
+                if row['rsi'] is not None and row['rsi'] > constants.RSI_BAND_HIGH and (index == 0 or row['rsi'] > banknifty_itraday_df.loc[index - 1, 'rsi']):
+                #if row['rsi'] is not None and row['rsi'] > constants.RSI_BAND_HIGH:
                     if max_rsi == 0:
                         temp_max_rsi = row['rsi']
                         temp_max_price = row['High']
@@ -353,8 +369,8 @@ if __name__ == '__main__':
                         synth_fut_buy_sell = 'Buy'
 
 
-                if row['rsi'] is not None and row['rsi'] < constants.RSI_BAND_LOW and (
-                        index == 0 or row['rsi'] < banknifty_itraday_df.loc[index - 1, 'rsi']):
+                if row['rsi'] is not None and row['rsi'] < constants.RSI_BAND_LOW and (index == 0 or row['rsi'] < banknifty_itraday_df.loc[index - 1, 'rsi']):
+                #if row['rsi'] is not None and row['rsi'] < constants.RSI_BAND_LOW:
                     if min_rsi == 0:
                         temp_min_rsi = row['rsi']
                         temp_min_price = row['Low']
@@ -371,39 +387,40 @@ if __name__ == '__main__':
 
                 if row['Close'] > synth_fut_trigger_price and  current_trade_straddle and synth_fut_trigger_price != 0\
                         and synth_fut_buy_sell == "Buy":
-                        current_trade_synFut = True
-                        current_trade_straddle = False
-                        fut_traded_price = row['Close']
+                    current_trade_synFut = True
+                    current_trade_straddle = False
+                    fut_traded_price = row['Close']
 
-                        #Close Straddle
-                        for index, bnf_options in bnf_options_five_min_df.iterrows():
+                    #Close Straddle
+                    print("=========== Synthetic Future Triggered Closing Short CE ===========")
+                    for index_option, bnf_options in bnf_options_five_min_df.iterrows():
 
-                            if bnf_options['Ticker'] == ce_straddle_symbol and bnf_options['Time'] == row['Time']:
-                                ce_buy_price = bnf_options['Close']
-                                ce_exit_time = bnf_options['Time']
+                        if bnf_options['Ticker'] == ce_straddle_symbol and bnf_options['Time'] == row['Time']:
+                            ce_buy_price = bnf_options['Close']
+                            ce_exit_time = bnf_options['Time']
 
-                                ce_pnl = ce_sell_price - ce_buy_price
+                            ce_pnl = ce_sell_price - ce_buy_price
 
-                                if intraday_trade_counter > 0:
-                                    booked_pnl = ce_pnl + booked_pnl
-                                else:
-                                    booked_pnl = ce_pnl
+                            if intraday_trade_counter > 0:
+                                booked_pnl = ce_pnl + booked_pnl
+                            else:
+                                booked_pnl = ce_pnl
 
 
-                                intraday_trade_counter = intraday_trade_counter + 1
-                                intraday_log = [ce_straddle_symbol, trading_date_dd_mm_yyyy, ce_buy_sell,
-                                                fut_traded_price,
-                                                ce_entry_time, ce_sell_price, ce_exit_time,
-                                                ce_buy_price, ce_pnl]
+                            intraday_trade_counter = intraday_trade_counter + 1
+                            intraday_log = [ce_straddle_symbol, trading_date_dd_mm_yyyy, ce_buy_sell,
+                                            fut_traded_price,
+                                            ce_entry_time, ce_sell_price, ce_exit_time,
+                                            ce_buy_price, ce_pnl]
 
-                                trade_log.loc[trade_index] = intraday_log
-                                trade_index = trade_index + 1
+                            trade_log.loc[trade_index] = intraday_log
+                            trade_index = trade_index + 1
 
-                                # trigger synthetic future
-                                ce_buy_sell = "Buy"
-                                ce_buy_price = bnf_options['Close']
-                                ce_entry_time = bnf_options['Time']
-                                break
+                            # trigger synthetic future
+                            ce_buy_sell = "Buy"
+                            ce_buy_price = bnf_options['Close']
+                            ce_entry_time = bnf_options['Time']
+                            break
 
                 if row['Close'] < synth_fut_trigger_price and current_trade_straddle and synth_fut_trigger_price != 0 \
                         and synth_fut_buy_sell == "Sell":
@@ -412,8 +429,10 @@ if __name__ == '__main__':
                     current_trade_straddle = False
                     fut_traded_price = row['Close']
 
+                    print("=========== Synthetic Future Triggered Closing Short PE ===========")
+
                     # Close Straddle
-                    for index, bnf_options in bnf_options_five_min_df.iterrows():
+                    for index_option, bnf_options in bnf_options_five_min_df.iterrows():
 
                         if bnf_options['Ticker'] == pe_straddle_symbol and bnf_options['Time'] == row['Time']:
                             pe_buy_price = bnf_options['Close']
