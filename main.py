@@ -107,10 +107,15 @@ if __name__ == '__main__':
         ce_buy_sell = ""
         pe_buy_sell = ""
         pnl = 0
+        booked_pnl = 0
+        ce_pnl = 0
+        pe_pnl = 0
 
         #print(banknifty_itraday_df)
         for index, row in banknifty_itraday_df.iterrows():
             print(index)
+            if row['Time'] > constants.TRADE_END_TIME:
+                break
             if current_trade_synFut:
                 if synth_fut_buy_sell == "Buy":
 
@@ -361,7 +366,7 @@ if __name__ == '__main__':
                         temp_min_rsi = 0
                         min_rsi = 0
 
-                if index < len(banknifty_itraday_df) - 1 and banknifty_itraday_df.loc[index + 1, 'rsi'] is not None and \
+                if banknifty_itraday_df.loc[index + 1, 'rsi'] is not None and \
                         banknifty_itraday_df.loc[index + 1, 'rsi'] < row['rsi']:
                     if temp_max_rsi != 0:
                         max_rsi = temp_max_rsi
@@ -378,7 +383,7 @@ if __name__ == '__main__':
                         max_rsi = 0
 
 
-                if index < len(banknifty_itraday_df) - 1 and banknifty_itraday_df.loc[index + 1, 'rsi'] is not None and \
+                if banknifty_itraday_df.loc[index + 1, 'rsi'] is not None and \
                         banknifty_itraday_df.loc[index + 1, 'rsi'] > row['rsi']:
                     if temp_min_rsi != 0:
                         min_rsi = temp_min_rsi
